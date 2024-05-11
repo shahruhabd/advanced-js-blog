@@ -9,20 +9,16 @@ function renderPosts() {
 
 function createPostElement(post) {
   post.comments = post.comments || [];
+  post.likes = post.likes || 0;
   const postElement = document.createElement("div");
   postElement.classList.add("card", "mb-3");
   postElement.dataset.id = post.id;
 
-  // Используем правильные поля для отображения имени пользователя и времени комментария
   const commentsHtml = post.comments.map(comment =>
     `<div class="card mb-2">
       <div class="card-body">
         <p class="card-text">${comment.content}</p>
-        <p class="card-text">
-          <small class="text-muted">
-            ${comment.username} at ${new Date(comment.time).toLocaleString()}
-          </small>
-        </p>
+        <p class="card-text"><small class="text-muted">${comment.username} at ${new Date(comment.time).toLocaleString()}</small></p>
       </div>
     </div>`).join('');
 
@@ -30,15 +26,39 @@ function createPostElement(post) {
     <div class="card-body">
       <h5 class="card-title">${post.username}</h5>
       <p class="card-text">${post.content}</p>
-      <p class="card-text">
-        <small class="text-muted">Published: ${new Date(post.time).toLocaleString()}</small>
-      </p>
+      <p class="card-text"><small class="text-muted">Published: ${new Date(post.time).toLocaleString()}</small></p>
       <div class="comments">${commentsHtml}</div>
       <textarea class="form-control mb-2 comment-content" rows="1" placeholder="Прокомментировать"></textarea>
       <button class="btn btn-secondary comment-btn">Отправить</button>
+      <button class="btn btn-primary like-btn">Лайк</button>
+      <span class="likes-count">${post.likes} лайков</span>
     </div>
   `;
+
+  // Анимация появления
+  postElement.animate([
+    { opacity: 0, transform: 'translateY(-20px)' },
+    { opacity: 1, transform: 'translateY(0)' }
+  ], {
+    duration: 500, // Продолжительность анимации в миллисекундах
+    easing: 'ease-out'
+  });
+
   return postElement;
+}
+
+
+function addLike(postId) {
+  const posts = JSON.parse(localStorage.getItem("posts")) || [];
+  const post = posts.find(p => p.id === parseInt(postId));
+  if (post) {
+    post.likes = (post.likes || 0) + 1;
+    localStorage.setItem("posts", JSON.stringify(posts));
+    console.log("Like added", posts);
+    renderPosts();  // Перерисовываем посты после добавления лайка
+  } else {
+    console.error("Post not found for liking");
+  }
 }
 
 function savePostInLocalStorage(post) {
@@ -119,6 +139,10 @@ document.addEventListener("DOMContentLoaded", function () {
       `;
       postElement.querySelector(".comments").appendChild(commentElement);
       postElement.querySelector(".comment-content").value = "";
+    } else if (event.target.classList.contains("like-btn")) {
+      const postElement = event.target.closest(".card.mb-3");
+      const postId = postElement.dataset.id;
+      addLike(postId);
     }
   });
 });
@@ -165,3 +189,17 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   document.getElementById("post-form").addEventListener("submit", handlePostSubmission);
 });
+
+function renderPosts() {
+  const postsContainer = document.getElementById("posts-container");
+  postsContainer.innerHTML = '';  // Очищаем текущие посты
+
+  const savedPosts = JSON.parse(localStorage.getItem("posts")) || [];
+  savedPosts.forEach(post => {
+    postsContainer.appendChild(createPostElement(post));
+  });
+
+  // Обновляем количество постов
+  const postCount = document.getElementById("post-count");
+  postCount.textContent = savedPosts.length;  // Отображаем количество постов
+}
